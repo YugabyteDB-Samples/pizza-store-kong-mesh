@@ -180,8 +180,8 @@ within the mesh network. The external user traffic should be forward via a mesh 
     ```
 3. Confirm the gateway is configured properly via the Kong Mesh GUI:
     http://localhost:5681/gui/mesh/default/gateways
-
-TBD picture
+   
+![gateway](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/dfa46981-dc00-48e8-b1bb-2627e367fbbc)
 
 ## Sending Requests Via Gateway
 

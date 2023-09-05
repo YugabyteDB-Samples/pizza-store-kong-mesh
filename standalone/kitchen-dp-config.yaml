@@ -1,0 +1,13 @@
+type: Dataplane
+mesh: default
+name: kitchen-dp
+networking:
+  address: 127.0.0.1
+  inbound:
+    - port: 5081
+      servicePort: 8081
+      tags:
+        kuma.io/service: kitchen-service
+        kuma.io/protocol: http
+  admin:
+    port: 9091

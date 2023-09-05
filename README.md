@@ -61,18 +61,88 @@ sudo ifconfig lo0 alias 127.0.0.3
 
 Once the cluster is ready, use the contents of the `schema/pizza_store_geo_distributed.sql` script to create tables and other database objects the application uses.
 
-## Starting Application
+## Deploying Kong Mesh
 
-The application conveniently starts in containers using Docker Compose.
+Start a Kong Mesh instance in the [standalone deployment](https://docs.konghq.com/mesh/2.4.x/production/deployment/stand-alone/) mode:
 
-1. Navigate to the root directory of the project and start the app:
+1. Download and install the [kumactl](https://docs.konghq.com/mesh/2.4.x/production/install-kumactl/) tool:
     ```shell
-    docker compose up --build
-    ```
-    Note, the `--build` command is needed only during the first start or whenever you update the application source code.
+    curl -L https://docs.konghq.com/mesh/installer.sh | VERSION=2.4.0 sh -
 
-2. Confirm there are no errors in the logs and open the Discovery Service dashboard (`localhost:8761`) to make sure all the services have been registered:
-    ![spring_discovery_service](https://github.com/YugabyteDB-Samples/pizza-store-spring-cloud/assets/1537233/7d3bd049-07bb-496c-bc2a-82ac3cca71e3)
+    cd kong-mesh-2.4.0/bin
+    PATH=$(pwd):$PATH
+    ```
+2. Start a Kuma Control Plane (CP) in the standalone mode:
+    ```shell
+    kuma-cp run
+    ```
+3. Extract the admin credentials:
+    ```shell
+    export TOKEN=$(curl http://localhost:5681/global-secrets/admin-user-token | jq -r .data | base64 -d)
+    ```
+4. Register the Control Plane with the Kong Mesh:
+    ```shell
+    kumactl config control-planes add \
+        --name pizza-store-control-plane \
+        --address http://localhost:5681 \
+        --auth-type=tokens \
+        --auth-conf token=$TOKEN \
+        --skip-verify
+    ```
+5. Open the Kong Mesh GUI to make sure CP and Mesh components are running:
+    http://localhost:5681/gui/
+
+
+## Starting Microservices and Dataplanes
+
+First, create a folder for the dataplane tokens:
+```shell
+mkdir $HOME/kong-mesh
+```
+
+Next, start a kitchen service and its dataplane:
+
+1. Navigate to the root directory of the kitchen microservice:
+    ```shell
+    cd kitchen
+
+    mvn spring-boot:run
+    ```
+
+2. Generate a toke for the service:
+    ```shell
+    kumactl generate dataplane-token --tag kuma.io/service=kitchen-service --valid-for=720h > $HOME/kong-mesh/kuma-token-kitchen-service
+    ```
+
+3. Start a Dataplane (DP) for the service:
+    ```shell
+    kuma-dp run \
+        --cp-address=https://localhost:5678 \
+        --dataplane-file=standalone/kitchen-dp-config.yaml \
+        --dataplane-token-file=$HOME/kong-mesh/kuma-token-kitchen-service
+    ```
+
+Finally, repeat the steps to start a tracker microservice with its dataplane:
+1. Navigate to the root directory of the kitchen microservice:
+    ```shell
+    cd tracker
+
+    mvn spring-boot:run
+    ```
+
+2. Generate a toke for the service:
+    ```shell
+    kumactl generate dataplane-token --tag kuma.io/service=tracker-service --valid-for=720h > $HOME/kong-mesh/kuma-token-tracker-service
+    ```
+
+3. Start a Dataplane (DP) for the service:
+    ```shell
+    kuma-dp run \
+        --cp-address=https://localhost:5678 \
+        --dataplane-file=standalone/tracker-dp-config.yaml \
+        --dataplane-token-file=$HOME/kong-mesh/kuma-token-tracker-service
+    ```
+
 
 ## Sending Requests Via Cloud Gateway
 

@@ -1,0 +1,13 @@
+type: Dataplane
+mesh: default
+name: tracker-dp
+networking:
+  address: 127.0.0.1
+  inbound:
+    - port: 5082
+      servicePort: 8082
+      tags:
+        kuma.io/service: tracker-service
+        kuma.io/protocol: http
+  admin:
+    port: 9092

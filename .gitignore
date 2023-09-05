@@ -27,3 +27,4 @@ replay_pid*
 # other directories
 .DS_Store
 scripts
+kong-mesh*

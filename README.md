@@ -1,6 +1,6 @@
-# Pizza Store With Spring Cloud and YugabyteDB
+# Pizza Store With Kong Mesh and YugabyteDB
 
-This project provides a functional skeleton for a pizza store implemented with the Spring Cloud framework and YugabyteDB.
+This project provides a functional skeleton for a pizza store implemented using Kong Mesh and YugabyteDB.
 
 The project comes with two microservices that support various REST API endpoints for client requests:
 1. The Kitchen service (see the `kitchen` directory) - allows customers to order pizza.

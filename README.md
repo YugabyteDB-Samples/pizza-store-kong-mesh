@@ -9,9 +9,11 @@ The project comes with two microservices that support various REST API endpoints
 ![standalone_mesh_arch](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/14e35556-095e-4c9d-8156-84c46087eea8)
 
 
-Both microservices register with the [Spring Discovery Service](https://spring.io/projects/spring-cloud-netflix)(aka. Spring Cloud Netflix). This allows all the registered services to connect and communicate with each other directly using only their names.
+There is a Kuma data plane (KUMA-DP) running alongside the kitchen and tracker microservices. The DPs are used for the service-to-service communication. 
 
-The client interacts with the microservices via [Spring Cloud Gateway](https://spring.io/projects/spring-cloud-gateway). Following the provided routes configuration, the gateway resolves user requests and forwards them to respective services. The gateway also registers with the Discovery Service to benefit from the automatic discovery of the registered Kitchen and Tracker services.
+The Kuma control plane (KUMA-CP) is used to configure and manage the mesh components including the DPs of the kitchen and tracker services.
+
+The users interact with the microservices via the mesh gateway instance that is deployed as a standalone DP of the Kong Mesh. Following the provided routes configuration, the gateway resolves user requests and forwards them to respective services.
 
 YugabyteDB is a database that can scale horizontally, withstand various outages, and pin pizza orders to required locations. The application supports stretched and geo-partitioned YugabyteDB clusters.
 
@@ -19,12 +21,12 @@ YugabyteDB is a database that can scale horizontally, withstand various outages,
 
 You can use a YugabyteDB deployment option that works best for you. 
 
-Configure the following environment variables that are used in the `docker-compose.yaml` during the start of microservice instances:
+Configure the following environment variables that are checked by the kitchen and tracker during the start of microservice instances (see the `application.properties` files for details):
 * `DB_URL` - the database connection URL in the `jdbc:postgresql://{HOSTNAME}:5433/yugabyte` format.
 * `DB_USER` - a user name to connect with.
 * `DB_PASSWORD` - the password.
 
-If you run a YugabyteDB instance on a local machine and the instance is accessible via `localhost`, then you don't need to configure the settings above.
+Note, if you run a YugabyteDB instance on a local machine and the instance is accessible via `localhost`, then you don't need to configure the settings above.
 
 ### Creating Standard Schema
 
@@ -103,6 +105,11 @@ First, create a folder for the data plane tokens:
 mkdir $HOME/kong-mesh
 ```
 
+Also, unless you run a YugabyteDB instance and Kong Mesh on the same machine, you need to define the following environment variables that are used by the microservices:
+* `DB_URL` - the database connection URL in the `jdbc:postgresql://{HOSTNAME}:5433/yugabyte` format.
+* `DB_USER` - a user name to connect with.
+* `DB_PASSWORD` - the password.
+
 Next, start a kitchen service and its data plane (DP):
 
 1. Navigate to the root directory of the kitchen microservice:
@@ -151,23 +158,40 @@ http://localhost:5681/gui/mesh/default/data-planes
 
 ![data-planes](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/90a8cbd1-7574-4253-9732-01566c2b6a17)
 
+## Configuring Mesh Gateway
 
-## Sending Requests Via Data Planes
+The data planes that are deployed alongsied the kitchen and tracker microservices should be use for the service-to-service communication 
+within the mesh network. The external user traffic should be forward via a mesh gateway instance that can function as a standalone data plane in the mesh.
 
-Now you can use the [HTTPie tool](https://httpie.io) to send REST requests via the data planes of the Kong Mesh.
+1. Start a built-in gateway instance:
+    ```shell
+    kumactl generate dataplane-token --tag kuma.io/service=mesh-gateway --valid-for=720h > $HOME/kong-mesh/kuma-token-mesh-gateway
 
-Requests to the Kitchen microservice via the kitchen DP listening on port `5081`:
-```shell
-kumactl inspect dataplane kitchen-dp
+    kuma-dp run \
+        --cp-address=https://localhost:5678/ \
+        --dns-enabled=false \
+        --dataplane-token-file=$HOME/kong-mesh/kuma-token-mesh-gateway \
+        --dataplane-file=standalone/mesh-gateway-dp-config.yaml
+    ```
+2. Configure the gateway and its routes:
+    ```shell
+    kumactl apply -f standalone/mesh-gateway-config.yaml
+    kumactl apply -f standalone/mesh-gateway-route-config.yaml
+    ```
+3. Confirm the gateway is configured properly via the Kong Mesh GUI:
+    http://localhost:5681/gui/mesh/default/gateways
 
-INBOUND 127.0.0.1:5081:8081(kitchen-service):
-  TrafficPermission
-    allow-all-default
-```
+TBD picture
+
+## Sending Requests Via Gateway
+
+Now you can use the [HTTPie tool](https://httpie.io) to send REST requests via the gateway DP of the Kong Mesh.
+
+Requests to the Kitchen microservice:
 
 * Put new pizza orders in:
     ```shell
-    http POST localhost:5081/kitchen/order id=={ID} location=={LOCATION}
+    http POST localhost:8080/kitchen/order id=={ID} location=={LOCATION}
     ```
     where:
     * `ID` - an order integer id.
@@ -175,7 +199,7 @@ INBOUND 127.0.0.1:5081:8081(kitchen-service):
 
 * Update order status:
     ```shell
-    http PUT localhost:5081/kitchen/order id=={ID} status=={STATUS} [location=={LOCATION}]
+    http PUT localhost:8080/kitchen/order id=={ID} status=={STATUS} [location=={LOCATION}]
     ```
     where:
     * `ID` - an order id.
@@ -188,22 +212,15 @@ INBOUND 127.0.0.1:5081:8081(kitchen-service):
     ```
 
 Requests to the Tracker microservice via the tracker DP listening on port `5082`:
-```shell
-kumactl inspect dataplane tracker-dp
-
-INBOUND 127.0.0.1:5082:8082(tracker-service):
-  TrafficPermission
-    allow-all-default
-```
 
 * Get an order status:
     ```shell
-    http GET localhost:5082/tracker/order id=={ID} [location=={LOCATION}]
+    http GET localhost:8080/tracker/order id=={ID} [location=={LOCATION}]
     ```
     * `ID` - an order id.
     * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
 * Get all orders status:
     ```shell
-    http GET localhost:5082/tracker/orders [location=={LOCATION}]
+    http GET localhost:8080/tracker/orders [location=={LOCATION}]
     ```
     * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.

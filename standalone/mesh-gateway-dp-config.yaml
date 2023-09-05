@@ -1,0 +1,9 @@
+type: Dataplane
+mesh: default
+name: mesh-gateway-instance
+networking:
+  address: 127.0.0.1
+  gateway:
+    type: BUILTIN
+    tags:
+      kuma.io/service: mesh-gateway

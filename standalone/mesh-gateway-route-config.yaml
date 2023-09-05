@@ -1,0 +1,23 @@
+type: MeshGatewayRoute
+mesh: default
+name: mesh-gateway-default-route
+selectors:
+  - match:
+      kuma.io/service: mesh-gateway
+conf:
+  http:
+    rules:
+      - matches:
+          - path:
+              match: PREFIX
+              value: /kitchen
+        backends:
+          - destination:
+              kuma.io/service: kitchen-service
+      - matches:
+          - path:
+              match: PREFIX
+              value: /tracker
+        backends:
+          - destination:
+              kuma.io/service: tracker-service

@@ -93,6 +93,19 @@ Start a Kong Mesh instance in the [standalone deployment](https://docs.konghq.co
     http://localhost:5681/gui/
 
 
+## Configuring Traffic Logger
+
+Configure a logging backend that will capture the access traffic for the entire mesh:
+
+1. Deploy a logging backend:
+    ```shell
+    kumactl apply -f standalone/logging-backend-config.yaml
+    ```
+2. Configure a traffic log policy:
+    ```shell
+    kumactl apply -f standalone/traffic-log-policy-config.yaml
+    ```
+
 ## Starting Microservices and Dataplanes
 
 First, create a folder for the dataplane tokens:

@@ -1,0 +1,13 @@
+type: Mesh
+name: default
+logging:
+  # TrafficLog policies may leave the `backend` field undefined.
+  # In that case the logs will be forwarded into the `defaultBackend` of that Mesh.
+  defaultBackend: file
+  # List of logging backends that can be referred to by name
+  # from TrafficLog policies of that Mesh.
+  backends:
+    - name: file
+      type: file
+      conf:
+        path: /tmp/kong-mesh-access.log

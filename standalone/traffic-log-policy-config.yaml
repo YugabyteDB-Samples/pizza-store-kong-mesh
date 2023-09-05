@@ -1,0 +1,10 @@
+type: TrafficLog
+name: all-traffic
+mesh: default
+# This TrafficLog policy applies to all traffic in the Mesh.
+sources:
+  - match:
+      kuma.io/service: "*"
+destinations:
+  - match:
+      kuma.io/service: "*"

@@ -61,7 +61,7 @@ sudo ifconfig lo0 alias 127.0.0.3
 
 Once the cluster is ready, use the contents of the `schema/pizza_store_geo_distributed.sql` script to create tables and other database objects the application uses.
 
-## Deploying Kong Mesh
+## Deploying Kong Mesh Control Plane
 
 Start a Kong Mesh instance in the [standalone deployment](https://docs.konghq.com/mesh/2.4.x/production/deployment/stand-alone/) mode:
 
@@ -80,7 +80,7 @@ Start a Kong Mesh instance in the [standalone deployment](https://docs.konghq.co
     ```shell
     export TOKEN=$(curl http://localhost:5681/global-secrets/admin-user-token | jq -r .data | base64 -d)
     ```
-4. Register the Control Plane with the Kong Mesh:
+4. Register the Control Plane with the mesh:
     ```shell
     kumactl config control-planes add \
         --name pizza-store-control-plane \
@@ -91,29 +91,18 @@ Start a Kong Mesh instance in the [standalone deployment](https://docs.konghq.co
     ```
 5. Open the Kong Mesh GUI to make sure CP and Mesh components are running:
     http://localhost:5681/gui/
+   
+![control-plane](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/919ce28f-20ab-44a6-b721-810792c5d1b8)
 
 
-## Configuring Traffic Logger
+## Starting Microservices and Data Planes
 
-Configure a logging backend that will capture the access traffic for the entire mesh:
-
-1. Deploy a logging backend:
-    ```shell
-    kumactl apply -f standalone/logging-backend-config.yaml
-    ```
-2. Configure a traffic log policy:
-    ```shell
-    kumactl apply -f standalone/traffic-log-policy-config.yaml
-    ```
-
-## Starting Microservices and Dataplanes
-
-First, create a folder for the dataplane tokens:
+First, create a folder for the data plane tokens:
 ```shell
 mkdir $HOME/kong-mesh
 ```
 
-Next, start a kitchen service and its dataplane:
+Next, start a kitchen service and its data plane (DP):
 
 1. Navigate to the root directory of the kitchen microservice:
     ```shell
@@ -122,12 +111,12 @@ Next, start a kitchen service and its dataplane:
     mvn spring-boot:run
     ```
 
-2. Generate a toke for the service:
+2. Generate a token for the service:
     ```shell
     kumactl generate dataplane-token --tag kuma.io/service=kitchen-service --valid-for=720h > $HOME/kong-mesh/kuma-token-kitchen-service
     ```
 
-3. Start a Dataplane (DP) for the service:
+3. Start a DP instance for the service:
     ```shell
     kuma-dp run \
         --cp-address=https://localhost:5678 \
@@ -135,7 +124,7 @@ Next, start a kitchen service and its dataplane:
         --dataplane-token-file=$HOME/kong-mesh/kuma-token-kitchen-service
     ```
 
-Finally, repeat the steps to start a tracker microservice with its dataplane:
+Finally, repeat the steps to start a tracker microservice with its data plane:
 1. Navigate to the root directory of the kitchen microservice:
     ```shell
     cd tracker
@@ -143,12 +132,12 @@ Finally, repeat the steps to start a tracker microservice with its dataplane:
     mvn spring-boot:run
     ```
 
-2. Generate a toke for the service:
+2. Generate a token for the service:
     ```shell
     kumactl generate dataplane-token --tag kuma.io/service=tracker-service --valid-for=720h > $HOME/kong-mesh/kuma-token-tracker-service
     ```
 
-3. Start a Dataplane (DP) for the service:
+3. Start a DP instance for the service:
     ```shell
     kuma-dp run \
         --cp-address=https://localhost:5678 \
@@ -156,15 +145,28 @@ Finally, repeat the steps to start a tracker microservice with its dataplane:
         --dataplane-token-file=$HOME/kong-mesh/kuma-token-tracker-service
     ```
 
+Go to the Kong Mesh GUI to confirm the data planes and respective services are running normally:
+http://localhost:5681/gui/mesh/default/data-planes
 
-## Sending Requests Via Cloud Gateway
+![data-planes](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/90a8cbd1-7574-4253-9732-01566c2b6a17)
 
-Now you can use the [HTTPie tool](https://httpie.io) to send REST requests via the running Spring Cloud Gateway Instance. The gateway routes are configured in the `api-gateway/.../ApiGatewayApplication.java` file. 
 
-Requests to the Kitchen microservice:
+## Sending Requests Via Data Planes
+
+Now you can use the [HTTPie tool](https://httpie.io) to send REST requests via the data planes of the Kong Mesh.
+
+Requests to the Kitchen microservice via the kitchen DP listening on port `5081`:
+```shell
+kumactl inspect dataplane kitchen-dp
+
+INBOUND 127.0.0.1:5081:8081(kitchen-service):
+  TrafficPermission
+    allow-all-default
+```
+
 * Put new pizza orders in:
     ```shell
-    http POST localhost:8080/kitchen/order id=={ID} location=={LOCATION}
+    http POST localhost:5081/kitchen/order id=={ID} location=={LOCATION}
     ```
     where:
     * `ID` - an order integer id.
@@ -172,7 +174,7 @@ Requests to the Kitchen microservice:
 
 * Update order status:
     ```shell
-    http PUT localhost:8080/kitchen/order id=={ID} status=={STATUS} [location=={LOCATION}]
+    http PUT localhost:5081/kitchen/order id=={ID} status=={STATUS} [location=={LOCATION}]
     ```
     where:
     * `ID` - an order id.
@@ -184,15 +186,23 @@ Requests to the Kitchen microservice:
     http DELETE localhost:8080/kitchen/orders
     ```
 
-Requests to the Tracker microservice:
+Requests to the Tracker microservice via the tracker DP listening on port `5082`:
+```shell
+kumactl inspect dataplane tracker-dp
+
+INBOUND 127.0.0.1:5082:8082(tracker-service):
+  TrafficPermission
+    allow-all-default
+```
+
 * Get an order status:
     ```shell
-    http GET localhost:8080/tracker/order id=={ID} [location=={LOCATION}]
+    http GET localhost:5082/tracker/order id=={ID} [location=={LOCATION}]
     ```
     * `ID` - an order id.
     * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
 * Get all orders status:
     ```shell
-    http GET localhost:8080/tracker/orders [location=={LOCATION}]
+    http GET localhost:5082/tracker/orders [location=={LOCATION}]
     ```
     * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.

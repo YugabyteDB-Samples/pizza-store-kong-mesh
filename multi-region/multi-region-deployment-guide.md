@@ -37,7 +37,8 @@ Start three virtual machines in GCP in the regions similar to the ones used by t
 Update the network firewall settings byt allowing access to the following ports from any machine (`0.0.0.0`) for the `HTTP` protocol:
     * `8080,5681`
 
-Then repeat the following on every VM:
+Then repeat the following for every VM:
+
     1. Install JDK 17+ with Maven.
     2. Download and install the [kumactl](https://docs.konghq.com/mesh/2.4.x/production/install-kumactl/) tool:
         ```shell

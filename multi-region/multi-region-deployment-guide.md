@@ -73,8 +73,10 @@ Next, deploy a [global control plane (CP)](https://docs.konghq.com/mesh/2.4.x/pr
     ```
 5. Open the Kong Mesh GUI to confirm the status of the global CP:
     http://{VM_PUBLIC_IP_ADDRESS}/gui
+    
+    ![global-cp](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/604cb292-701d-409e-a3cc-56ed0a9ec9eb)
 
-    TBD picture
+    
 
 
 

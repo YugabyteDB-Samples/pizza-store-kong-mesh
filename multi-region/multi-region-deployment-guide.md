@@ -34,7 +34,10 @@ Start three virtual machines in GCP in the regions similar to the ones used by t
     * `europe-west3`
     * `australia-southeast1`
 
-Do the following on each VM:
+Update the network firewall settings byt allowing access to the following ports from any machine (`0.0.0.0`) for the `HTTP` protocol:
+    * `8080,5681`
+
+Then repeat the following on every VM:
     1. Install JDK 17+ with Maven.
     2. Download and install the [kumactl](https://docs.konghq.com/mesh/2.4.x/production/install-kumactl/) tool:
         ```shell
@@ -44,14 +47,34 @@ Do the following on each VM:
         PATH=$(pwd):$PATH
         ```
     3. Add the `kong-mesh-2.4.0/bin` directory to the `.bashrc` or `.zshrc` file.
+    4. Clone the project:
+        ```shell
+        git clone https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh.git
+        ```
 
 ## Deploying Kong Global Control Plane
 
 Next, deploy a [global control plane (CP)](https://docs.konghq.com/mesh/2.4.x/production/cp-deployment/multi-zone/):
 
-1. Connect to the VM from `us-east4` and deploy the global CP:
+1. Connect to the VM from `us-east4` 
+2. Go to the `multi-region` directory of the project:
     ```shell
-    KUMA_MODE=global kuma-cp run
+    cd pizza-store-kong-mesh/multi-region
     ```
+3. Deploy the global CP:
+    ```shell
+    ./start-global-cp.sh 
+    ```
+4. Use the logs to check that the CP is running:
+    ```shell
+    tail nohup.out -f
+    ```
+5. Open the Kong Mesh GUI to confirm the status of the global CP:
+    http://{VM_PUBLIC_IP_ADDRESS}/gui
+
+    TBD picture
+
+
+
 
     

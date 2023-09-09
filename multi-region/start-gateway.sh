@@ -16,8 +16,3 @@ kuma-dp run \
     --dataplane-token-file=/tmp/kuma-token-mesh-gateway \
     --dataplane-file=../standalone/mesh-gateway-dp-config.yaml \
     > logs/gateway.log 2>&1 &
-
-echo Configure Gateway Routes
-
-kumactl apply -f ../standalone/mesh-gateway-config.yaml
-kumactl apply -f ../standalone/mesh-gateway-route-config.yaml

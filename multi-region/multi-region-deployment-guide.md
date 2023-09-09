@@ -36,7 +36,7 @@ Start three virtual machines in GCP in the regions similar to the ones used by t
 * `australia-southeast1`
 
 Update the network firewall settings byt allowing access to the following ports from any machine (`0.0.0.0`) for the `HTTP` protocol:
-* `8080,5681,5685`
+* `8080,5681,5685,6681`
 
 Then repeat the following for every VM:
 
@@ -99,10 +99,25 @@ Next, deploy a [global control plane (CP)](https://docs.konghq.com/mesh/2.4.x/pr
     tail -f logs/global-cp.log
     ```
 4. Open the Kong Mesh GUI to confirm the status of the global CP:
-    http://{VM_PUBLIC_IP_ADDRESS}:5681/gui
+    http://{VM_PUBLIC_IP_ADDRESS}:6681/gui
     
     ![global-cp](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/604cb292-701d-409e-a3cc-56ed0a9ec9eb)
 
+Configure required resources needed for mesh gateways via the global CP:
+
+1. Register global CP to `kumactl`:
+    ```shell
+    kumactl config control-planes add --address http://localhost:6681 --name global-cp
+    ```
+2. Register gateway routes:
+    ```shell
+    kumactl apply -f ../standalone/mesh-gateway-config.yaml
+    kumactl apply -f ../standalone/mesh-gateway-route-config.yaml
+    ```
+3. Switch `kumactl` back to the local control plane:
+    ```shell
+    kumactl config control-planes switch --name local
+    ```
 
 ## Deploying Zone Control Plane
 
@@ -126,7 +141,7 @@ Now deploy a dedicated control plane in each region. Make sure you're executing 
         -z australia-southeast1
     ```
 4. Make sure the zone CPs are started and registered with the global CP:
-    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui
 
     TBD screenshot
 
@@ -147,8 +162,8 @@ Repeat this on every VM:
     ./start-apps-and-dps.sh
     ```
 3. Use global CP GUI to confirm that DPs and apps have been started successfully:
-    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/data-planes
-    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/services
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/data-planes
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/services
 
     TBD screenshots
 
@@ -167,7 +182,7 @@ Repeat below on every VM:
     ./start-gateway.sh
     ```
 3. Use global CP GUI to confirm that the gateways have been started:
-    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/gateways
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/gateways
     
     TBD screenshot
 
@@ -215,3 +230,10 @@ Requests to the Tracker microservice via the tracker DP listening on port `5082`
     ```
     * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
 
+## Termination
+
+To stop the Kong Mesh with all the application processes, do the following:
+```shell
+pkill -9 -f kuma
+pkill -9 -f java
+```

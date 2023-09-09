@@ -121,9 +121,8 @@ Configure required resources needed for mesh gateways via the global CP:
 3. Configure mesh timeouts:
     ```shell
     kumactl apply -f ../standalone/mesh-timeout-config.yaml
-    kumactl apply -f ../standalone/mesh-gateway-route-config.yaml
     ```
-3. Switch `kumactl` back to the local control plane:
+4. Switch `kumactl` back to the local control plane:
     ```shell
     kumactl config control-planes switch --name local
     ```

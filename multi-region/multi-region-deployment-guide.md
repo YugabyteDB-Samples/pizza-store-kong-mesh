@@ -90,15 +90,19 @@ Next, deploy a [global control plane (CP)](https://docs.konghq.com/mesh/2.4.x/pr
 
 1. Make sure you're in the `pizza-store-kong-mesh/multi-region` of the `us-east4` VM.
     
-2. Deploy the global CP:
+2. Provide a path to a Kong Mesh license. If you skip this step, then start control and data planes for two regions out of three (i.e. `us-east4` and `europe-west3`):
+    ```shell
+    export KMESH_LICENSE_PATH={path_to_the_license_file}
+    ```
+3. Deploy the global CP:
     ```shell
     ./start-global-cp.sh 
     ```
-3. Use the logs to check that the CP is running:
+4. Use the logs to check that the CP is running:
     ```shell
     tail -f logs/global-cp.log
     ```
-4. Open the Kong Mesh GUI to confirm the status of the global CP:
+5. Open the Kong Mesh GUI to confirm the status of the global CP:
     http://{VM_PUBLIC_IP_ADDRESS}:6681/gui
     
     ![global-cp](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/604cb292-701d-409e-a3cc-56ed0a9ec9eb)

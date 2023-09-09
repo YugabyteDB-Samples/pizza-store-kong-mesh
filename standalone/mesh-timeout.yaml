@@ -1,0 +1,13 @@
+type: MeshTimeout
+name: timeout-global
+mesh: default
+spec:
+  targetRef:
+    kind: Mesh
+  to:
+    - targetRef:
+        kind: Mesh
+      default:
+        connectionTimeout: 10s
+        http:
+          requestTimeout: 30s

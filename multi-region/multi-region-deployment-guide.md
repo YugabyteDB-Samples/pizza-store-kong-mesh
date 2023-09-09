@@ -36,7 +36,7 @@ Start three virtual machines in GCP in the regions similar to the ones used by t
 * `australia-southeast1`
 
 Update the network firewall settings byt allowing access to the following ports from any machine (`0.0.0.0`) for the `HTTP` protocol:
-* `8080,5681`
+* `8080,5681,5685`
 
 Then repeat the following for every VM:
 
@@ -49,36 +49,169 @@ Then repeat the following for every VM:
     PATH=$(pwd):$PATH
     ```
 3. Add the `kong-mesh-2.4.0/bin` directory to the `.bashrc` or `.zshrc` file.
-4. Clone the project:
+
+## Init Application
+
+Prepare application and Kong Mesh on each VM for the deployment.
+
+Repeat the following for each VM:
+
+1. Connect to the VM
+2. Clone the project:
     ```shell
     git clone https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh.git
     ```
+3. Go to the `multi-region` directory of the project:
+    ```shell
+    cd pizza-store-kong-mesh/multi-region
+    ```
+4. Run the `init.sh` script:
+    ```shell
+    ./init.sh
+    ```
+5. Export the following environment variables:
+    ```shell
+    export GLOBAL_CP_IP_ADDRESS={global_cp}
+    export DB_URL="{db_url}"
+    export DB_USER={db_user}
+    export DB_PASSWORD={db_password}
+    ```
+    where
+    * `GLOBAL_CP_IP_ADDRESS` - public or private IP address of the VM running the global CP instance.
+    * `DB_URL` - the database connection URL in the `jdbc:postgresql://{HOSTNAME}:5433/yugabyte` format. The `HOSTNAME` needs to refer to a YugabyteDB Managed endpoint that is closest to the VM. For instance, the Kong Mesh and app of the `us-east4` VM have to connect to the database node from the `us-east4` region.
+    * `DB_USER` - a user name to connect with.
+    * `DB_PASSWORD` - the password.
+
+6. Remain in the `multi-region` directory.
 
 ## Deploying Kong Global Control Plane
 
 Next, deploy a [global control plane (CP)](https://docs.konghq.com/mesh/2.4.x/production/cp-deployment/multi-zone/):
 
-1. Connect to the VM from `us-east4` 
-2. Go to the `multi-region` directory of the project:
-    ```shell
-    cd pizza-store-kong-mesh/multi-region
-    ```
-3. Deploy the global CP:
+1. Make sure you're in the `pizza-store-kong-mesh/multi-region` of the `us-east4` VM.
+    
+2. Deploy the global CP:
     ```shell
     ./start-global-cp.sh 
     ```
-4. Use the logs to check that the CP is running:
+3. Use the logs to check that the CP is running:
     ```shell
-    tail nohup.out -f
+    tail -f logs/global-cp.log
     ```
-5. Open the Kong Mesh GUI to confirm the status of the global CP:
-    http://{VM_PUBLIC_IP_ADDRESS}/gui
+4. Open the Kong Mesh GUI to confirm the status of the global CP:
+    http://{VM_PUBLIC_IP_ADDRESS}:5681/gui
     
     ![global-cp](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/604cb292-701d-409e-a3cc-56ed0a9ec9eb)
 
+
+## Deploying Zone Control Plane
+
+Now deploy a dedicated control plane in each region. Make sure you're executing the commands below from the `pizza-store-kong-mesh/multi-region` directory.
+
+1. Start a CP on the `us-east4` VM:
+    ```shell
+    ./start-zone-cp.sh \
+        -z us-east4
+    ```
+
+2. Start a CP on the `europe-west3` VM:
+    ```shell
+    ./start-zone-cp.sh \
+        -z europe-west3
+    ```
+
+3. Start a CP on the `australia-southeast1` VM:
+    ```shell
+    ./start-zone-cp.sh \
+        -z australia-southeast1
+    ```
+4. Make sure the zone CPs are started and registered with the global CP:
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui
+
+    TBD screenshot
+
+Check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory if the zones failed to start or register.
+
+Note, this application doesn't require cross-zone communication between data planes. You need to configure [zone ingress and egress](https://docs.konghq.com/mesh/2.4.x/production/cp-deployment/multi-zone/#set-up-the-zone-control-planes) if this is necessary for your application.
+
+## Starting Apps and Data Planes
+
+Now, let's start microservice instances and data planes in each region. 
+
+Repeat this on every VM:
+
+1. Make sure you're in the the `pizza-store-kong-mesh/multi-region` directory.
+
+2. Start the apps and data planes:
+    ```shell
+    ./start-apps-and-dps.sh
+    ```
+3. Use global CP GUI to confirm that DPs and apps have been started successfully:
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/data-planes
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/services
+
+    TBD screenshots
+
+Check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory if services or DPs failed to start or register.
+
+## Starting Gateways
+
+Next, configure a gateway in each region.
+
+Repeat below on every VM:
+
+1. Make sure you're in the the `pizza-store-kong-mesh/multi-region` directory.
+
+2. Start the gateway:
+    ```shell
+    ./start-gateway.sh
+    ```
+3. Use global CP GUI to confirm that the gateways have been started:
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:5681/gui/mesh/default/gateways
     
+    TBD screenshot
 
+Check the `pizza-store-kong-mesh/multi-region/logs/gateway.log` log if there is an issue starting the gateway.
 
+## Sending Requests Via Gateway
 
+Now you can use the [HTTPie tool](https://httpie.io) to send REST requests via the gateway DP of the Kong Mesh.
 
+Requests to the Kitchen microservice:
+
+* Put new pizza orders in:
+    ```shell
+    http POST :8080/kitchen/order id=={ID} location=={LOCATION}
+    ```
+    where:
+    * `ID` - an order integer id.
+    * `LOCATION` - one of the following - `NewYork`, `Berlin` and `Sydney`
+
+* Update order status:
+    ```shell
+    http PUT :8080/kitchen/order id=={ID} status=={STATUS} [location=={LOCATION}]
+    ```
+    where:
+    * `ID` - an order id.
+    * `STATUS` - one of the following - `Ordered`, `Baking`, `Delivering` and `YummyInMyTummy`.
+    * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
     
+* Delete all orders:
+    ```shell
+    http DELETE :8080/kitchen/orders
+    ```
+
+Requests to the Tracker microservice via the tracker DP listening on port `5082`:
+
+* Get an order status:
+    ```shell
+    http GET :8080/tracker/order id=={ID} [location=={LOCATION}]
+    ```
+    * `ID` - an order id.
+    * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
+* Get all orders status:
+    ```shell
+    http GET localhost:8080/tracker/orders [location=={LOCATION}]
+    ```
+    * `LOCATION`(optional) - used for geo-partitioned deployments to avoid global transactions. Accepts one of the following - `NewYork`, `Berlin`, and `Sydney`.
+

@@ -20,9 +20,10 @@ Start a [geo-partitioned YugabyteDB Managed cluster](https://docs.yugabyte.com/p
 * `europe-west3`
 * `australia-southeast1`
 
-TBD - screenshot
 
-Once the cluster is started check the zone names assigned by YugabyteDB Managed to the regions. If necessary, update the zone names for the `usa_ts`, `europe_ts`, and `australia_ts` tablespaces from the `schema\pizza_store_geo_distributed.sql` file. The region and zone names must be identical.
+![cluster_create](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/23318ae0-36c2-408e-96bc-05320d98cd85)
+
+Once the cluster is started, check the zone names assigned by YugabyteDB Managed to the regions. If necessary, update the zone names for the `usa_ts`, `europe_ts`, and `australia_ts` tablespaces from the `schema\pizza_store_geo_distributed.sql` file. The region and zone names must be identical.
 
 ## Create Database Schema
 

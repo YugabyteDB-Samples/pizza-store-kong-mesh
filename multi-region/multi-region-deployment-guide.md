@@ -2,10 +2,10 @@
 
 This guide walks you through the process for running the application, Kong Mesh and YugabyteDB across several regions.
 
-TBD - architecture diagram
+![multi_region_mesh_arch](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/435a6ae7-82da-4727-9782-a8108ce16b57)
 
 Note, the guide is created for the Google Cloud Platform (GCP) and YugabyteDB Managed. If you prefer to run the app in a different cloud environment, 
-then make sure to adjust the region/zone names in the sections below and in the `schema\pizza_store_geo_distributed.sql` file.
+then adjust the region/zone names in the sections below and in the `schema\pizza_store_geo_distributed.sql` file.
 
 ## Prerequisite
 

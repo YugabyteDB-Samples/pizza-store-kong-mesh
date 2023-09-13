@@ -244,7 +244,7 @@ Requests to the Tracker microservice via the tracker DP listening on port `5082`
 
 ## Termination
 
-To stop the Kong Mesh with all the application processes, do the following:
+To stop the Kong Mesh with all the application processes, do the following on every VM:
 ```shell
 pkill -9 -f kuma
 pkill -9 -f java

@@ -150,13 +150,14 @@ Now deploy a dedicated control plane in each region. Make sure you're executing 
         -z australia-southeast1
     ```
 4. Make sure the zone CPs are started and registered with the global CP:
-    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui
+    http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/zones/zone-cps
+    
+    ![zone-cps](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/7af47c90-5e50-4cde-afd7-893cc391d35d)
 
-    TBD screenshot
+    
+If the zones fail to start or register, check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory.
 
-Check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory if the zones failed to start or register.
-
-Note, this application doesn't require cross-zone communication between data planes. You need to configure [zone ingress and egress](https://docs.konghq.com/mesh/2.4.x/production/cp-deployment/multi-zone/#set-up-the-zone-control-planes) if this is necessary for your application.
+Note, presently, the application doesn't have a capability requiring cross-zone communication between data planes. You need to configure [zone ingress and egress](https://docs.konghq.com/mesh/2.4.x/production/cp-deployment/multi-zone/#set-up-the-zone-control-planes) if this is necessary for your application.
 
 ## Starting Apps and Data Planes
 
@@ -173,10 +174,11 @@ Repeat this on every VM:
 3. Use global CP GUI to confirm that DPs and apps have been started successfully:
     http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/data-planes
     http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/services
+    
+    ![zone-data-planes](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/556914a0-d54a-4291-8e5a-89db473367ae)
 
-    TBD screenshots
 
-Check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory if services or DPs failed to start or register.
+Check the logs in the `pizza-store-kong-mesh/multi-region/logs` directory if services or DPs fail to start or register.
 
 ## Starting Gateways
 
@@ -193,7 +195,8 @@ Repeat below on every VM:
 3. Use global CP GUI to confirm that the gateways have been started:
     http://{GLOBAL_CP_PUBLIC_IP_ADDRESS}:6681/gui/mesh/default/gateways
     
-    TBD screenshot
+    ![gateways](https://github.com/YugabyteDB-Samples/pizza-store-kong-mesh/assets/1537233/64ac2a84-3e06-4a90-b73b-5c1767f9e582)
+
 
 Check the `pizza-store-kong-mesh/multi-region/logs/gateway.log` log if there is an issue starting the gateway.
 
